@@ -1,0 +1,81 @@
+{
+    "settingGroups": {
+        "pfimapsettings": {
+            "description": "IMAP Mail Server Settings",
+            "settings": [
+                "pfemailserver",
+                "pfemailuser",
+                "pfemailpass",
+                "pfemailport",
+                "pfmailbox"
+            ]
+        }
+    },
+    "attributes": {
+        "level": 0,
+        "gatherStats": false,
+        "restart": 0,
+        "reboot": 0,
+        "default": ""
+    },
+    "settings": {
+        "pfemailpass": {
+            "name": "pfemailpass",
+            "description": "IMAP Password",
+            "tip": "Password to be used to authenticate with email server.",
+            "gatherStats": false,
+            "type": "password",
+            "size": 30,
+            "maxlength": 100
+        },
+        "pfemailport": {
+            "name": "pfemailport",
+            "description": "IMAP Server Port",
+            "tip": "TCP Port used on IMAP server.  Most server use 993 for encrypted traffic, some servers may still require 143.",
+            "gatherStats": false,
+            "restart": 0,
+            "type": "select",
+            "options": {
+                "143": 143,
+                "993 (SSL)": 993
+            },
+            "default": 993
+        },
+        "pfemailserver": {
+            "name": "pfemailserver",
+            "description": "IMAP Server Hostname",
+            "tip": "Server to check for new email.",
+            "gatherStats": false,
+            "type": "text",
+            "size": 30,
+            "maxlength": 64,
+            "children": {
+                "*": [
+                    "pfemailuser",
+                    "pfemailpass",
+                    "pfemailport",
+                    "pfmailbox"
+                ]
+            }
+        },
+        "pfemailuser": {
+            "name": "pfemailuser",
+            "description": "IMAP Login",
+            "tip": "Login for IMAP server, may be the same as the from address.",
+            "gatherStats": false,
+            "type": "text",
+            "size": 30,
+            "maxlength": 64
+        },
+        "pfmailbox": {
+            "name": "pfmailbox",
+            "description": "IMAP Mailbox",
+            "tip": "Name of mailbox on IMAP server.",
+            "gatherStats": false,
+            "type": "text",
+            "size": 30,
+            "maxlength": 64,
+            "default": "Inbox"
+        }
+    }
+}

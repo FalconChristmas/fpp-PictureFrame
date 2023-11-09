@@ -1,0 +1,23 @@
+{
+    "repoName": "fpp-PictureFrame",
+    "name": "FPP Picture Frame",
+    "author": "Chris Pinkham (CaptainMurdoch)",
+    "description": "This plugin allows you to use FPP to create a Picture Frame with the ability to automatically download images from a remote IMAP mailbox.",
+    "homeURL": "https://github.com/cpinkham/fpp-PictureFrame",
+    "srcURL": "https://github.com/cpinkham/fpp-PictureFrame.git",
+    "bugURL": "https://github.com/cpinkham/fpp-PictureFrame/issues",
+    "allowUpdates": 1,
+    "versions": [
+        {
+            "minFPPVersion": "7.0",
+            "maxFPPVersion": "0",
+            "branch": "master",
+            "sha": "",
+            "dependencies": {
+                "packages": [
+                    "php-imap"
+                ]
+            }
+        }
+    ]
+}
