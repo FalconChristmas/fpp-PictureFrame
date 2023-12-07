@@ -47,6 +47,10 @@ $port = 993;
 $username = '';
 $password = '';
 $mailbox = 'INBOX';
+$autoDelete = 1;
+
+if (isset($pluginSettings['pfautodelete']))
+    $autoDelete = intval($pluginSettings['pfautodelete']);
 
 if (isset($pluginSettings['pfemailserver']))
     $host = $pluginSettings['pfemailserver'];
@@ -78,6 +82,8 @@ printLog(FPP_LOG_DEBUG, sprintf( "Host           : %s", $host));
 printLog(FPP_LOG_DEBUG, sprintf( "Port           : %d", $port));
 printLog(FPP_LOG_DEBUG, sprintf( "Mailbox        : %s", $mailbox));
 printLog(FPP_LOG_DEBUG, sprintf( "Server         : %s", $server));
+
+$imageRegex = "\.(jpeg|jpg|png|gif)$";
 
 $validSenders = array();
 $senderFolders = array();
@@ -125,19 +131,25 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
     $headers = imap_headerinfo($mbox, $i);
 
     $sender = '';
-    $validSender = -1;
+    $validSender = -2;
     $senderIndex = 0;
-    for ($j = 0; $j < count($headers->from); $j++) {
-        $sender = $headers->from[$j]->mailbox . '@' . $headers->from[$j]->host;
-        foreach ($validSenders as $senderRegex) {
-            if (preg_match("/$senderRegex/", $sender)) {
-                $validSender = $senderIndex;
-                printLog(FPP_LOG_DEBUG, sprintf( "Sender '%s' matches regex '%s'", $sender, $senderRegex));
+    $downloadedImages = 0;
+
+    if (count($validSenders) > 0) {
+        for ($j = 0; $j < count($headers->from); $j++) {
+            $sender = $headers->from[$j]->mailbox . '@' . $headers->from[$j]->host;
+            foreach ($validSenders as $senderRegex) {
+                if (preg_match("/$senderRegex/", $sender)) {
+                    $validSender = $senderIndex;
+                    printLog(FPP_LOG_DEBUG, sprintf( "Sender '%s' matches regex '%s'", $sender, $senderRegex));
+                }
             }
         }
+    } else {
+        $validSender = -1;
     }
 
-    if ($validSender >= 0) {
+    if ($validSender >= -1) {
         $overview = imap_fetch_overview($mbox, $i, 0);
         $message = imap_fetchbody($mbox, $i, 2);
         $structure = imap_fetchstructure($mbox, $i);
@@ -202,32 +214,40 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
             if($attachment['is_attachment'] == 1)
             {
                 $filename = $attachment['name'];
+
                 if(empty($filename)) $filename = $attachment['filename'];
 
-                if(empty($filename)) $filename = time() . ".jpg";
+                if (preg_match("/$imageRegex/i", $filename)) {
+                    $fn = '/dev/null';
+                    if (($validSender >= 0) &&
+                        ($senderFolders[$validSender] != '') &&
+                        (is_dir($imageDir . '/' . $senderFolders[$validSender]))) {
+                        $fn = sprintf( "%s/%s/%s-%s", $imageDir, $senderFolders[$validSender], Date('Ymd'), $filename);
+                    } else {
+                        $fn = sprintf( "%s/%s-%s", $imageDir, Date('Ymd'), $filename);
+                    }
+                    printLog( FPP_LOG_INFO, sprintf("Saving File: %s", $fn));
+                    $fp = fopen($fn, "w+");
+                    fwrite($fp, $attachment['attachment']);
+                    fclose($fp);
 
-                $fn = '/dev/null';
-                if (($senderFolders[$validSender] != '') &&
-                    (is_dir($imageDir . '/' . $senderFolders[$validSender]))) {
-                    $fn = sprintf( "%s/%s/%s-%s", $imageDir, $senderFolders[$validSender], Date('Ymd'), $filename);
+                    chown($fn, 'fpp');
+                    chgrp($fn, 'fpp');
+                    chmod($fn, 0644);
+
+                    $downloadedImages = 1;
                 } else {
-                    $fn = sprintf( "%s/%s-%s", $imageDir, Date('Ymd'), $filename);
+                    printLog( FPP_LOG_INFO, sprintf("Skipping non-image file: %s", $filename));
                 }
-                printLog( FPP_LOG_INFO, sprintf("Saving File: %s", $fn));
-                $fp = fopen($fn, "w+");
-                fwrite($fp, $attachment['attachment']);
-                fclose($fp);
-
-                chown($fn, 'fpp');
-                chgrp($fn, 'fpp');
-                chmod($fn, 0644);
             }
         }
-
-        // Delete the email
-        imap_delete($mbox, $i);
     } else {
         printLog(FPP_LOG_WARN, sprintf( "Sender '%s' is not in list of valid senders", $sender));
+    }
+
+    if ($autoDelete && $downloadedImages) {
+        // Delete the email
+        imap_delete($mbox, $i);
     }
 }
 

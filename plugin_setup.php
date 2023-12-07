@@ -279,6 +279,23 @@ $(document).ready(function() {
 
 </script>
 
+<?php
+$needfb = 1;
+
+if (file_exists($configDirectory . '/model-overlays.json')) {
+    $data = file_get_contents($configDirectory . '/model-overlays.json');
+    $models = json_decode($data, true);
+    foreach ( $models['models'] as $model) {
+        if (($model['Name'] == 'fb0') || ($model['Name'] == 'fb1')) {
+            $needfb = 0;
+        }
+    }
+}
+
+if ($needfb) {
+    echo "<span class='alert alert-danger'><b>WARNING: Could not find Pixel Overlay Model, click for <a href='javascript:void();' onClick='DisplayHelp();'>more info</a>.</b></span>\n";
+}
+?>
 
 <div id="warningsRow" class="alert alert-danger"><div id="warningsTd"><div id="warningsDiv"></div></div></div>
 <div id="global" class="settings">
@@ -311,12 +328,12 @@ foreach (scandir($imageDir) as $fileName) {
 }
 
 foreach ($imageFolders as $dirName) {
-    printf( "<tr><td><input type='text' class='folder' size=32 maxlength=64 value='%s' /></td></tr>", $dirName);
+    printf( "<tr><td><input type='text' class='folder' size=32 maxlength=64 value='%s' disabled/></td></tr>", $dirName);
 }
 ?>
                     </tbody>
                 </table>
-                <b>NOTE: Folders are automatically deleted when the Delete button is used, you do not need to use the Save button.  You must Save the folder list before folder names will automatically appear in the folder column of the sender list.</b>
+                <b>NOTE: Folders are automatically deleted in FPP when the Delete button is used, but are only created when the Save button is used.</b>
             </div>
         </div>
         <br>
