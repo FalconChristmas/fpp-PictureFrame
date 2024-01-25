@@ -12,7 +12,7 @@ define("FPP_LOG_INFO",        3);
 define("FPP_LOG_DEBUG",       4);
 define("FPP_LOG_EXCESSIVE",   5);
 
-$logLevel = FPP_LOG_INFO;
+$logLevel = FPP_LOG_WARN;
 
 if (isset($settings['LogLevel_Plugin'])) {
     switch ($settings['LogLevel_Plugin']) {
@@ -34,23 +34,11 @@ if (isset($settings['LogLevel_Plugin'])) {
     }
 }
 
-function printLog($level, $string) {
-    global $logLevel;
-
-    if ($logLevel >= $level) {
-        echo date("Y-m-d H:i:s") . ' ' . $string . "\n";
-    }
-}
-
 $host = '';
 $port = 993;
 $username = '';
 $password = '';
 $mailbox = 'INBOX';
-$autoDelete = 1;
-
-if (isset($pluginSettings['pfautodelete']))
-    $autoDelete = intval($pluginSettings['pfautodelete']);
 
 if (isset($pluginSettings['pfemailserver']))
     $host = $pluginSettings['pfemailserver'];
@@ -82,8 +70,6 @@ printLog(FPP_LOG_DEBUG, sprintf( "Host           : %s", $host));
 printLog(FPP_LOG_DEBUG, sprintf( "Port           : %d", $port));
 printLog(FPP_LOG_DEBUG, sprintf( "Mailbox        : %s", $mailbox));
 printLog(FPP_LOG_DEBUG, sprintf( "Server         : %s", $server));
-
-$imageRegex = "\.(jpeg|jpg|png|gif)$";
 
 $validSenders = array();
 $senderFolders = array();
@@ -131,21 +117,23 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
     $headers = imap_headerinfo($mbox, $i);
 
     $sender = '';
-    $validSender = -2;
+    $validSender = -2; // Invalid sender
     $senderIndex = 0;
-    $downloadedImages = 0;
+    $downloadedImages = false;
 
     if (count($validSenders) > 0) {
         for ($j = 0; $j < count($headers->from); $j++) {
             $sender = $headers->from[$j]->mailbox . '@' . $headers->from[$j]->host;
             foreach ($validSenders as $senderRegex) {
-                if (preg_match("/$senderRegex/", $sender)) {
+                if (($validSender == -2) && preg_match("/$senderRegex/i", $sender)) {
                     $validSender = $senderIndex;
                     printLog(FPP_LOG_DEBUG, sprintf( "Sender '%s' matches regex '%s'", $sender, $senderRegex));
                 }
+                $senderIndex++;
             }
         }
     } else {
+        // -1 == allow all senders
         $validSender = -1;
     }
 
@@ -156,98 +144,46 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
 
         $attachments = array();
 
-        // This code is from https://stackoverflow.com/questions/2649579/downloading-attachments-to-directory-with-imap-in-php-randomly-works
         if (isset($structure->parts) && count($structure->parts)) {
-            for ($x = 0; $x < count($structure->parts); $x++) {
-                $attachments[$x] = array(
-                    'is_attachment' => false,
-                    'filename' => '',
-                    'name' => '',
-                    'attachment' => ''
-                );
-
-                if($structure->parts[$x]->ifdparameters) 
-                {
-                    foreach($structure->parts[$x]->dparameters as $object) 
-                    {
-                        if(strtolower($object->attribute) == 'filename') 
-                        {
-                            $attachments[$x]['is_attachment'] = true;
-                            $attachments[$x]['filename'] = $object->value;
-                        }
-                    }
-                }
-
-                if($structure->parts[$x]->ifparameters) 
-                {
-                    foreach($structure->parts[$x]->parameters as $object) 
-                    {
-                        if(strtolower($object->attribute) == 'name') 
-                        {
-                            $attachments[$x]['is_attachment'] = true;
-                            $attachments[$x]['name'] = $object->value;
-                        }
-                    }
-                }
-
-                if($attachments[$x]['is_attachment']) 
-                {
-                    $attachments[$x]['attachment'] = imap_fetchbody($mbox, $i, $x+1);
-
-                    /* 3 = BASE64 encoding */
-                    if($structure->parts[$x]->encoding == 3) 
-                    { 
-                        $attachments[$x]['attachment'] = base64_decode($attachments[$x]['attachment']);
-                    }
-                    /* 4 = QUOTED-PRINTABLE encoding */
-                    elseif($structure->parts[$x]->encoding == 4) 
-                    { 
-                        $attachments[$x]['attachment'] = quoted_printable_decode($attachments[$x]['attachment']);
-                    }
-                }
+            for ($x = 1; $x <= count($structure->parts); $x++) {
+                checkPartForAttachments($attachments, $mbox, $i,
+                    $structure->parts[$x-1], "$x");
             }
         }
 
         /* iterate through each attachment and save it */
         foreach($attachments as $attachment)
         {
-            if($attachment['is_attachment'] == 1)
-            {
-                $filename = $attachment['name'];
+            $filename = $attachment['filename'];
 
-                if(empty($filename)) $filename = $attachment['filename'];
-
-                if (preg_match("/$imageRegex/i", $filename)) {
-                    $fn = '/dev/null';
-                    if (($validSender >= 0) &&
-                        ($senderFolders[$validSender] != '') &&
-                        (is_dir($imageDir . '/' . $senderFolders[$validSender]))) {
-                        $fn = sprintf( "%s/%s/%s-%s", $imageDir, $senderFolders[$validSender], Date('Ymd'), $filename);
-                    } else {
-                        $fn = sprintf( "%s/%s-%s", $imageDir, Date('Ymd'), $filename);
-                    }
-                    printLog( FPP_LOG_INFO, sprintf("Saving File: %s", $fn));
-                    $fp = fopen($fn, "w+");
-                    fwrite($fp, $attachment['attachment']);
-                    fclose($fp);
-
-                    chown($fn, 'fpp');
-                    chgrp($fn, 'fpp');
-                    chmod($fn, 0644);
-
-                    $downloadedImages = 1;
-                } else {
-                    printLog( FPP_LOG_INFO, sprintf("Skipping non-image file: %s", $filename));
-                }
+            $fn = '/dev/null';
+            $prefix = Date('Ymd') . '-';
+            if (($validSender >= 0) &&
+                ($senderFolders[$validSender] != '') &&
+                (is_dir($imageDir . '/' . $senderFolders[$validSender]))) {
+                $fn = sprintf( "%s/%s/%s%s", $imageDir,
+                    $senderFolders[$validSender], $prefix, $filename);
+            } else {
+                $fn = sprintf( "%s/%s%s", $imageDir, $prefix, $filename);
             }
-        }
-    } else {
-        printLog(FPP_LOG_WARN, sprintf( "Sender '%s' is not in list of valid senders", $sender));
-    }
+            printLog( FPP_LOG_INFO, sprintf("Saving File: %s", $fn));
+            $fp = fopen($fn, "w+");
+            fwrite($fp, $attachment['attachment']);
+            fclose($fp);
 
-    if ($autoDelete && $downloadedImages) {
-        // Delete the email
-        imap_delete($mbox, $i);
+            chown($fn, 'fpp');
+            chgrp($fn, 'fpp');
+            chmod($fn, 0644);
+
+            $downloadedImages = true;
+        }
+
+        // Delete the email if we saved any images from it
+        // if ($downloadedImages)
+        //     imap_delete($mbox, $i);
+    } else {
+        printLog(FPP_LOG_WARN,
+            sprintf( "Sender '%s' is not in list of valid senders", $sender));
     }
 }
 
@@ -255,5 +191,65 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
 imap_expunge($mbox);
 
 imap_close($mbox);
+
+/////////////////////////////////////////////////////////////////////////////
+
+function printLog($level, $string) {
+    global $logLevel;
+
+    if ($logLevel >= $level) {
+        echo date("Y-m-d H:i:s") . ' ' . $string . "\n";
+    }
+}
+
+function checkPartForAttachments(&$attachments, $mbox, $idx, $part, $partNum) {
+    $attachment = array(
+        'filename' => '',
+        'attachment' => ''
+    );
+
+    if (isset($part->parts) && count($part->parts)) {
+        for ($y = 1; $y <= count($part->parts); $y++) {
+            checkPartForAttachments($attachments, $mbox, $idx,
+                $part->parts[$y-1], $partNum . ".$y");
+        }
+
+    } else if($part->ifdparameters) {
+        foreach($part->dparameters as $object)
+        {
+            if(strtolower($object->attribute) == 'filename')
+                $attachment['filename'] = $object->value;
+        }
+    } else if($part->ifparameters) {
+        foreach($part->parameters as $object)
+        {
+            if(strtolower($object->attribute) == 'name')
+                $attachment['filename'] = $object->value;
+        }
+    }
+
+    if (($attachment['filename'] != '') &&
+        (preg_match('/\.(jpg|jpeg|png|gif)$/i', $attachment['filename'])))
+    {
+        $attachment['attachment'] = imap_fetchbody($mbox, $idx, $partNum);
+
+        /* 3 = BASE64 encoding */
+        if($part->encoding == 3)
+        {
+            $attachment['attachment'] =
+                base64_decode($attachment['attachment']);
+        }
+        /* 4 = QUOTED-PRINTABLE encoding */
+        elseif($part->encoding == 4)
+        {
+            $attachment['attachment'] =
+                quoted_printable_decode($attachment['attachment']);
+        }
+
+        if (isset($attachment['attachment'])) {
+            array_push($attachments, $attachment);
+        }
+    }
+}
 
 ?>
