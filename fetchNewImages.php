@@ -179,8 +179,8 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
         }
 
         // Delete the email if we saved any images from it
-        // if ($downloadedImages)
-        //     imap_delete($mbox, $i);
+        if ($downloadedImages)
+            imap_delete($mbox, $i);
     } else {
         printLog(FPP_LOG_WARN,
             sprintf( "Sender '%s' is not in list of valid senders", $sender));
