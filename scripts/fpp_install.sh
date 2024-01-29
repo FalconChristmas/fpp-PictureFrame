@@ -13,7 +13,7 @@ cp scripts/CheckForNewPictureFrameImages.sh /home/fpp/media/scripts/
 chown fpp:fpp /home/fpp/media/scripts/CheckForNewPictureFrameImages.sh
 
 cp scripts/pf-monitor*.sh /home/fpp/media/scripts/
-chown fpp.fpp /home/fpp/media/scripts/pf-monitor*sh
+chown fpp:fpp /home/fpp/media/scripts/pf-monitor*sh
 
 systemctl --now enable smbd
 systemctl --now enable nmbd
