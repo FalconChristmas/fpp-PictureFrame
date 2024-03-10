@@ -176,6 +176,9 @@ for ($i = 1; $i <= $info->Nmsgs; $i++) {
             chmod($fn, 0644);
 
             $downloadedImages = true;
+
+            shell_exec('sync');
+            sleep(5);
         }
 
         // Delete the email if we saved any images from it
