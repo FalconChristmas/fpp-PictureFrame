@@ -6,6 +6,7 @@ BASEDIR=$(dirname $0)
 cd $BASEDIR
 cd ..
 
+dpkg --configure -a
 apt-get update
 apt-get -y install php-imap
 
