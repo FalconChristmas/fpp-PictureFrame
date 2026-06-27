@@ -1,4 +1,4 @@
 #!/bin/bash
 
-php /home/fpp/media/plugins/fpp-PictureFrame/fetchNewImages.php
+python3 /home/fpp/media/plugins/fpp-PictureFrame/fetchNewImages.py
 

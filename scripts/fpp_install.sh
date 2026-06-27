@@ -6,9 +6,8 @@ BASEDIR=$(dirname $0)
 cd $BASEDIR
 cd ..
 
-dpkg --configure -a
-apt-get update
-apt-get -y install php-imap
+# Image fetching is handled by fetchNewImages.py (Python stdlib: imaplib +
+# email). No PHP IMAP extension or other packages are required.
 
 cp scripts/CheckForNewPictureFrameImages.sh /home/fpp/media/scripts/
 chown fpp:fpp /home/fpp/media/scripts/CheckForNewPictureFrameImages.sh

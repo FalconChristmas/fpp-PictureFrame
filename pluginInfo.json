@@ -10,14 +10,21 @@
     "versions": [
         {
             "minFPPVersion": "7.0",
-            "maxFPPVersion": "0",
+            "maxFPPVersion": "9.99",
             "branch": "main",
-            "sha": "",
+            "sha": "3e521491e46d83a24696820c6a29f861759ac298",
             "dependencies": {
                 "packages": [
                     "php-imap"
                 ]
             }
+        },
+        {
+            "minFPPVersion": "10.0",
+            "maxFPPVersion": "0",
+            "branch": "main",
+            "sha": "",
+            "dependencies": {}
         }
     ]
 }
