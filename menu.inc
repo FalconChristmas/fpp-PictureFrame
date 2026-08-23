@@ -19,13 +19,7 @@ $menuEntries = Array(
         'wrap' => 1
     ),
     Array(
-        'text' => 'Template - Help',
-        'type' => 'help',
-        'page' => 'help/help.php',
-        'wrap' => 1
-    ),
-    Array(
-        'text' => 'PictureFrame - About',
+        'text' => 'Picture Frame',
         'type' => 'help',
         'page' => 'about.php',
         'wrap' => 1
