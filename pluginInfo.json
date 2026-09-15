@@ -27,5 +27,47 @@
             "sha": "",
             "dependencies": {}
         }
-    ]
+    ],
+    "privacy": {
+        "summary": "Logs in to the mailbox you set up, downloads the photos people email to it and keeps them on this device until you delete them. Also turns on FPP's password-free Windows file sharing.",
+        "sends": [
+            {
+                "to": "the IMAP mail server you enter",
+                "what": "your mailbox login and requests to read and delete the emails in that mailbox",
+                "why": "to download the photos people email to the frame",
+                "alwaysOn": false
+            }
+        ],
+        "collects": [
+            {
+                "what": "photos emailed to the frame by the senders you allow (or by anyone if the list is empty)",
+                "about": "third-parties",
+                "keptDays": null,
+                "canDelete": true,
+                "where": "images/"
+            }
+        ],
+        "sensors": [],
+        "remoteAccess": "none",
+        "systemChanges": [
+            {
+                "kind": "service",
+                "what": "Turns on FPP's Samba file-sharing services (smbd and nmbd) at install; they stay on after uninstall"
+            },
+            {
+                "kind": "network",
+                "what": "Opens FPP's password-free Windows share (SMB, ports 139/445) of the whole media folder, settings included, on your LAN"
+            },
+            {
+                "kind": "core-settings",
+                "what": "Sets FPP's Service_smbd_nmbd setting to on in the FPP settings file"
+            },
+            {
+                "kind": "core-settings",
+                "what": "Copies three scripts (fetch images, monitor on, monitor off) into FPP's scripts folder"
+            }
+        ],
+        "closedCode": false,
+        "other": "Every email in the mailbox is read on each check, even from senders not on your list; emails it takes photos from are deleted from the mailbox after download, and the 'Delete After Downloading' setting is not honoured by the current fetch script. Script output can include the email addresses of rejected senders. The mailbox password is kept in FPP's config folder, which the Windows share above and FPP's JSON backup include. Delete downloaded photos from FPP's File Manager (Images tab). Downloaded photos, the copied scripts and the Samba service are left in place after uninstall. On FPP 7 to 9 the older version installs Debian's php-imap package with apt."
+    }
 }
